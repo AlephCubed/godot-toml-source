@@ -30,7 +30,12 @@ impl TOML {
     }
 
     #[func]
-    pub fn parse(&self, toml_text: GString, keep_text: bool) -> i64 {
+    pub fn parse(&mut self, toml_text: GString, keep_text: bool) -> i64 {
+        self.parsed_text = match keep_text {
+            true => toml_text,
+            false => GString::new(),
+        };
+
         todo!()
     }
 
@@ -41,7 +46,9 @@ impl TOML {
 
     #[func]
     pub fn stringify(variant: Variant) -> GString {
-        serialize_variant(variant).to_string().into()
+        toml::to_string_pretty(&serialize_variant(variant))
+            .unwrap()
+            .into()
     }
 
     #[func]
