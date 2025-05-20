@@ -1,5 +1,7 @@
 use fancy_regex::Regex;
+use godot::global::print;
 use godot::prelude::*;
+use toml::de::Error;
 use toml::{Table, Value};
 
 /// Contains the methods and properties to parse a toml file and work with it.
@@ -8,7 +10,7 @@ use toml::{Table, Value};
 pub struct TOML {
     data: Variant,
     error_line: i64,
-    error_message: GString,
+    error_message: String,
     parsed_text: GString,
 }
 
@@ -21,7 +23,7 @@ impl TOML {
 
     #[func]
     pub fn get_error_message(&self) -> GString {
-        self.error_message.clone()
+        self.error_message.clone().into()
     }
 
     #[func]
@@ -32,11 +34,26 @@ impl TOML {
     #[func]
     pub fn parse(&mut self, toml_text: GString, keep_text: bool) -> i64 {
         self.parsed_text = match keep_text {
-            true => toml_text,
+            true => toml_text.clone(),
             false => GString::new(),
         };
 
-        todo!()
+        let value = match toml::from_str::<Value>(&toml_text.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                self.error_message = e.message().to_owned();
+
+                if let Some(span) = e.span() {
+                    self.error_line = span.start as i64; // Todo not line number.
+                }
+
+                return self.get_error_line();
+            }
+        };
+
+        self.data = deserialize_variant(&value);
+
+        0
     }
 
     #[func]
@@ -62,12 +79,45 @@ impl TOML {
     }
 }
 
+fn deserialize_variant(value: &Value) -> Variant {
+    match value {
+        Value::String(value) => GString::from(value).to_variant(),
+        Value::Integer(value) => value.to_variant(),
+        Value::Float(value) => value.to_variant(),
+        Value::Boolean(value) => value.to_variant(),
+        Value::Datetime(_) => unimplemented!(),
+        Value::Array(value) => deserialize_array(value),
+        Value::Table(value) => deserialize_dictionary(value),
+    }
+}
+
+fn deserialize_array(vec: &Vec<Value>) -> Variant {
+    let array: Array<Variant> = vec.iter().map(deserialize_variant).collect();
+    array.to_variant()
+}
+
+fn deserialize_dictionary(table: &Table) -> Variant {
+    let mut dictionary = Dictionary::new();
+
+    for (key, value) in table.iter() {
+        let is_conflict = dictionary
+            .insert(key.clone(), deserialize_variant(value))
+            .is_some();
+
+        if is_conflict {
+            godot_error!("Duplicate key found: '{key}'. Only one value will be parsed!");
+        }
+    }
+
+    dictionary.to_variant()
+}
+
 fn serialize_variant(variant: Variant) -> Value {
     match variant.get_type() {
+        VariantType::STRING => Value::String(variant.try_to().unwrap()),
         VariantType::INT => Value::Integer(variant.try_to().unwrap()),
         VariantType::FLOAT => Value::Float(variant.try_to().unwrap()),
         VariantType::BOOL => Value::Boolean(variant.try_to().unwrap()),
-        VariantType::STRING => Value::String(variant.try_to().unwrap()),
         VariantType::ARRAY => serialize_array(variant.try_to().unwrap()),
         VariantType::DICTIONARY => serialize_dictionary(variant.try_to().unwrap()),
         _ => unimplemented!("{variant} is not yet serializable."),
