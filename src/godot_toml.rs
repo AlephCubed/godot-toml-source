@@ -10,8 +10,43 @@ pub struct GodotToml;
 #[godot_api]
 impl GodotToml {
     #[func]
+    pub fn get_error_line() -> i64 {
+        todo!()
+    }
+
+    #[func]
+    pub fn get_error_message() -> GString {
+        todo!()
+    }
+
+    #[func]
+    pub fn get_parsed_text() -> GString {
+        todo!()
+    }
+
+    #[func]
+    pub fn parse(toml_text: GString, keep_text: bool) -> i64 {
+        todo!()
+    }
+
+    #[func]
+    pub fn parse_string(toml_string: GString) -> Variant {
+        todo!()
+    }
+
+    #[func]
     pub fn stringify(&self, variant: Variant) -> String {
         self.serialize_variant(variant).to_string()
+    }
+
+    #[func]
+    pub fn get_data() -> Variant {
+        todo!()
+    }
+
+    #[func]
+    pub fn set_data(value: Variant) {
+        todo!()
     }
 
     fn serialize_variant(&self, variant: Variant) -> Value {
@@ -212,19 +247,6 @@ fn encode_rect2(pos_vec: Vector2, size_vec: Vector2) -> Rect2 {
     )
 }
 
-/// Returns a Transform2D with the provided x, y, and origin vectors.
-///
-/// # Arguments
-///
-/// `transform2d_init` - The values provided for the Transform2D.
-fn encode_transform2d(
-    x_axis_vec: Vector2,
-    y_axis_vec: Vector2,
-    origin_vec: Vector2,
-) -> Transform2D {
-    Transform2D::from_cols(x_axis_vec, y_axis_vec, origin_vec)
-}
-
 /// Returns a Transform with the provided axis vectors and the origin vector.
 ///
 /// # Arguments
@@ -398,7 +420,7 @@ fn set_godot_type_to_dictionary(
                     &mut None,
                 );
 
-                let transform2d = encode_transform2d(vec2_pool[0], vec2_pool[1], vec2_pool[2]);
+                let transform2d = Transform2D::from_cols(vec2_pool[0], vec2_pool[1], vec2_pool[2]);
                 dictionary.set(key.to_variant(), transform2d.to_variant());
                 break;
             }
