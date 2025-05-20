@@ -2,13 +2,12 @@
 name = "godot_toml"
 version = "0.1.0"
 authors = ["Bob <robertcorponoi@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-gdnative = "0.8"
-toml = "0.5"
-fancy-regex = "0.3.5"
-euclid = "0.20.11"
+godot = { version = "0.2.4", features = ["serde"] }
+toml = "0.8.22"
+fancy-regex = "0.14.0"
