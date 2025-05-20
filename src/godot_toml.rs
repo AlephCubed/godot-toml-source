@@ -16,22 +16,32 @@ impl GodotToml {
 
     fn serialize_variant(&self, variant: Variant) -> Value {
         match variant.get_type() {
-            VariantType::STRING => Value::String(variant.try_to().unwrap()),
             VariantType::INT => Value::Integer(variant.try_to().unwrap()),
             VariantType::FLOAT => Value::Float(variant.try_to().unwrap()),
             VariantType::BOOL => Value::Boolean(variant.try_to().unwrap()),
+            VariantType::STRING => Value::String(variant.try_to().unwrap()),
+            VariantType::ARRAY => self.serialize_array(variant.try_to().unwrap()),
             VariantType::DICTIONARY => self.serialize_dictionary(variant.try_to().unwrap()),
             _ => unimplemented!("{variant} is not yet serializable."),
         }
+    }
+
+    fn serialize_array(&self, vec: Vec<Variant>) -> Value {
+        let mut array = toml::value::Array::new();
+
+        for variant in vec {
+            array.push(self.serialize_variant(variant));
+        }
+
+        Value::Array(array)
     }
 
     fn serialize_dictionary(&self, dict: Dictionary) -> Value {
         let mut table = Table::new();
 
         for key in dict.keys_shared() {
-            if let Some(variant) = dict.get(key.clone()) {
-                table.insert(key.to_string(), self.serialize_variant(variant));
-            }
+            let variant = dict.get(key.clone()).unwrap();
+            table.insert(key.to_string(), self.serialize_variant(variant));
         }
 
         Value::Table(table)
