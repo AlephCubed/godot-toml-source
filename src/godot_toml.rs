@@ -3,29 +3,34 @@ use godot::prelude::*;
 use toml::{Table, Value};
 
 /// Contains the methods and properties to parse a toml file and work with it.
-#[derive(GodotClass)]
+#[derive(GodotClass, Default)]
 #[class(base=Node, init)]
-pub struct GodotToml;
+pub struct TOML {
+    data: Variant,
+    error_line: i64,
+    error_message: GString,
+    parsed_text: GString,
+}
 
 #[godot_api]
-impl GodotToml {
+impl TOML {
     #[func]
-    pub fn get_error_line() -> i64 {
-        todo!()
+    pub fn get_error_line(&self) -> i64 {
+        self.error_line
     }
 
     #[func]
-    pub fn get_error_message() -> GString {
-        todo!()
+    pub fn get_error_message(&self) -> GString {
+        self.error_message.clone()
     }
 
     #[func]
-    pub fn get_parsed_text() -> GString {
-        todo!()
+    pub fn get_parsed_text(&self) -> GString {
+        self.parsed_text.clone()
     }
 
     #[func]
-    pub fn parse(toml_text: GString, keep_text: bool) -> i64 {
+    pub fn parse(&self, toml_text: GString, keep_text: bool) -> i64 {
         todo!()
     }
 
@@ -35,52 +40,52 @@ impl GodotToml {
     }
 
     #[func]
-    pub fn stringify(&self, variant: Variant) -> String {
-        self.serialize_variant(variant).to_string()
+    pub fn stringify(variant: Variant) -> GString {
+        serialize_variant(variant).to_string().into()
     }
 
     #[func]
-    pub fn get_data() -> Variant {
-        todo!()
+    pub fn get_data(&self) -> Variant {
+        self.data.clone()
     }
 
     #[func]
-    pub fn set_data(value: Variant) {
-        todo!()
+    pub fn set_data(&mut self, value: Variant) {
+        self.data = value;
+    }
+}
+
+fn serialize_variant(variant: Variant) -> Value {
+    match variant.get_type() {
+        VariantType::INT => Value::Integer(variant.try_to().unwrap()),
+        VariantType::FLOAT => Value::Float(variant.try_to().unwrap()),
+        VariantType::BOOL => Value::Boolean(variant.try_to().unwrap()),
+        VariantType::STRING => Value::String(variant.try_to().unwrap()),
+        VariantType::ARRAY => serialize_array(variant.try_to().unwrap()),
+        VariantType::DICTIONARY => serialize_dictionary(variant.try_to().unwrap()),
+        _ => unimplemented!("{variant} is not yet serializable."),
+    }
+}
+
+fn serialize_array(vec: Vec<Variant>) -> Value {
+    let mut array = toml::value::Array::new();
+
+    for variant in vec {
+        array.push(serialize_variant(variant));
     }
 
-    fn serialize_variant(&self, variant: Variant) -> Value {
-        match variant.get_type() {
-            VariantType::INT => Value::Integer(variant.try_to().unwrap()),
-            VariantType::FLOAT => Value::Float(variant.try_to().unwrap()),
-            VariantType::BOOL => Value::Boolean(variant.try_to().unwrap()),
-            VariantType::STRING => Value::String(variant.try_to().unwrap()),
-            VariantType::ARRAY => self.serialize_array(variant.try_to().unwrap()),
-            VariantType::DICTIONARY => self.serialize_dictionary(variant.try_to().unwrap()),
-            _ => unimplemented!("{variant} is not yet serializable."),
-        }
+    Value::Array(array)
+}
+
+fn serialize_dictionary(dict: Dictionary) -> Value {
+    let mut table = Table::new();
+
+    for key in dict.keys_shared() {
+        let variant = dict.get(key.clone()).unwrap();
+        table.insert(key.to_string(), serialize_variant(variant));
     }
 
-    fn serialize_array(&self, vec: Vec<Variant>) -> Value {
-        let mut array = toml::value::Array::new();
-
-        for variant in vec {
-            array.push(self.serialize_variant(variant));
-        }
-
-        Value::Array(array)
-    }
-
-    fn serialize_dictionary(&self, dict: Dictionary) -> Value {
-        let mut table = Table::new();
-
-        for key in dict.keys_shared() {
-            let variant = dict.get(key.clone()).unwrap();
-            table.insert(key.to_string(), self.serialize_variant(variant));
-        }
-
-        Value::Table(table)
-    }
+    Value::Table(table)
 }
 
 /// Populates a dictionary with the parsed values of the toml table provided.
