@@ -1,5 +1,5 @@
 use godot::prelude::*;
-use toml::value::{Datetime, Offset};
+use toml::value::{Date, Datetime, Offset, Time};
 use toml::{Table, Value};
 
 /// Contains the methods and properties to parse a toml file and work with it.
@@ -74,9 +74,9 @@ impl TOML {
 
     #[func]
     pub fn stringify(variant: Variant) -> GString {
-        toml::to_string_pretty(&serialize_variant(variant))
-            .unwrap()
-            .into()
+        let intermediate = serialize_variant(variant);
+        godot_print!("Intermediate {intermediate}");
+        toml::to_string_pretty(&intermediate).unwrap().into()
     }
 }
 
@@ -116,6 +116,13 @@ fn deserialize_datetime(datetime: &Datetime) -> Variant {
         dictionary.set("year", date.year);
     }
 
+    if let Some(time) = datetime.time {
+        dictionary.set("hour", time.hour);
+        dictionary.set("minute", time.minute);
+        dictionary.set("second", time.second);
+        dictionary.set("nanosecond", time.nanosecond);
+    }
+
     if let Some(offset) = datetime.offset {
         dictionary.set(
             "offset_minute",
@@ -124,13 +131,6 @@ fn deserialize_datetime(datetime: &Datetime) -> Variant {
                 Offset::Custom { minutes } => minutes,
             },
         );
-    }
-
-    if let Some(time) = datetime.time {
-        dictionary.set("hour", time.hour);
-        dictionary.set("minute", time.minute);
-        dictionary.set("second", time.second);
-        dictionary.set("nanosecond", time.nanosecond);
     }
 
     dictionary.to_variant()
@@ -159,12 +159,81 @@ fn serialize_array(vec: Vec<Variant>) -> Value {
 }
 
 fn serialize_dictionary(dict: Dictionary) -> Value {
+    if let Some(datetime) = serialize_datetime(&dict) {
+        return Value::Datetime(datetime);
+    }
+
     let mut table = Table::new();
 
-    for key in dict.keys_shared() {
-        let variant = dict.get(key.clone()).unwrap();
-        table.insert(key.to_string(), serialize_variant(variant));
+    for (key, value) in dict.iter_shared() {
+        table.insert(key.to_string(), serialize_variant(value));
     }
 
     Value::Table(table)
+}
+
+const GODOT_DATETIME_KEYS: [&'static str; 10] = [
+    "year",
+    "month",
+    "day",
+    "weekday",
+    "hour",
+    "minute",
+    "second",
+    "nanosecond",
+    "dst",
+    "offset_minute",
+];
+
+macro_rules! get_int_or_default {
+    ($dict:ident, $key:literal) => {
+        match $dict.get($key) {
+            None => 0,
+            Some(value) => value.try_to().ok()?,
+        }
+    };
+}
+
+/// If the dictionary only contains [`GODOT_DATETIME_KEYS`], then it will be serialized as a TOML [`Datetime`].
+fn serialize_datetime(dict: &Dictionary) -> Option<Datetime> {
+    if !dict
+        .keys_shared()
+        .all(|key| GODOT_DATETIME_KEYS.contains(&key.to_string().as_str()))
+    {
+        return None;
+    }
+
+    // Todo date and time are still serialized even if none of their keys are present.
+    let date = Date {
+        year: get_int_or_default!(dict, "year"),
+        month: get_int_or_default!(dict, "month"),
+        day: get_int_or_default!(dict, "day"),
+    };
+
+    let time = Time {
+        hour: get_int_or_default!(dict, "hour"),
+        minute: get_int_or_default!(dict, "minute"),
+        second: get_int_or_default!(dict, "second"),
+        nanosecond: get_int_or_default!(dict, "nanosecond"),
+    };
+
+    let mut offset = None;
+
+    if dict.contains_key("offset") {
+        if let Some(minutes) = dict
+            .get("offset_minute")
+            .and_then(|v| Variant::try_to::<i16>(&v).ok())
+        {
+            offset = Some(match minutes {
+                0 => Offset::Z,
+                _ => Offset::Custom { minutes },
+            });
+        }
+    }
+
+    Some(Datetime {
+        date: Some(date),
+        time: Some(time),
+        offset,
+    })
 }
