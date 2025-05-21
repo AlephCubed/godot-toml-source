@@ -42,7 +42,7 @@ impl TOML {
                 self.error_message = e.message().to_owned();
 
                 if let Some(span) = e.span() {
-                    self.error_line = span.start as i64; // Todo not line number.
+                    self.error_line = span.end as i64; // Todo not line number.
                 }
 
                 return self.get_error_line();
@@ -56,7 +56,19 @@ impl TOML {
 
     #[func]
     pub fn parse_string(toml_string: GString) -> Variant {
-        todo!()
+        let mut toml = TOML::default();
+        let error_line = toml.parse(toml_string, false);
+
+        if error_line != 0 {
+            godot_error!(
+                "Error parsing on line {}: {}",
+                error_line,
+                toml.get_error_message()
+            );
+            Variant::nil()
+        } else {
+            toml.get_data()
+        }
     }
 
     #[func]
