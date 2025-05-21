@@ -4,12 +4,13 @@ use toml::{Table, Value};
 
 /// Contains the methods and properties to parse a toml file and work with it.
 #[derive(GodotClass, Default)]
-#[class(base=Node, init)]
+#[class(base=Resource, init)]
 pub struct TOML {
-    data: Variant,
-    error_line: i64,
-    error_message: String,
-    parsed_text: GString,
+    #[var]
+    pub data: Variant,
+    pub error_line: i64,
+    pub error_message: String,
+    pub parsed_text: GString,
 }
 
 #[godot_api]
@@ -67,7 +68,7 @@ impl TOML {
             );
             Variant::nil()
         } else {
-            toml.get_data()
+            toml.data
         }
     }
 
@@ -76,16 +77,6 @@ impl TOML {
         toml::to_string_pretty(&serialize_variant(variant))
             .unwrap()
             .into()
-    }
-
-    #[func]
-    pub fn get_data(&self) -> Variant {
-        self.data.clone()
-    }
-
-    #[func]
-    pub fn set_data(&mut self, value: Variant) {
-        self.data = value;
     }
 }
 
