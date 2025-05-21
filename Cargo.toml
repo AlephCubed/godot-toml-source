@@ -10,4 +10,3 @@ crate-type = ["cdylib"]
 [dependencies]
 godot = { version = "0.2.4", features = ["serde"] }
 toml = "0.8.22"
-fancy-regex = "0.14.0"
