@@ -1,7 +1,5 @@
 use fancy_regex::Regex;
-use godot::global::print;
 use godot::prelude::*;
-use toml::de::Error;
 use toml::{Table, Value};
 
 /// Contains the methods and properties to parse a toml file and work with it.
@@ -81,7 +79,7 @@ impl TOML {
 
 fn deserialize_variant(value: &Value) -> Variant {
     match value {
-        Value::String(value) => GString::from(value).to_variant(),
+        Value::String(value) => value.to_variant(),
         Value::Integer(value) => value.to_variant(),
         Value::Float(value) => value.to_variant(),
         Value::Boolean(value) => value.to_variant(),
@@ -100,13 +98,7 @@ fn deserialize_dictionary(table: &Table) -> Variant {
     let mut dictionary = Dictionary::new();
 
     for (key, value) in table.iter() {
-        let is_conflict = dictionary
-            .insert(key.clone(), deserialize_variant(value))
-            .is_some();
-
-        if is_conflict {
-            godot_error!("Duplicate key found: '{key}'. Only one value will be parsed!");
-        }
+        dictionary.set(key.clone(), deserialize_variant(value));
     }
 
     dictionary.to_variant()
