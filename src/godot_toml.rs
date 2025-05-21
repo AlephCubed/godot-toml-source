@@ -42,7 +42,7 @@ impl TOML {
                 self.error_message = e.message().to_owned();
 
                 if let Some(span) = e.span() {
-                    self.error_line = span.end as i64; // Todo not line number.
+                    self.error_line = toml_text.count("\n", ..span.start) as i64;
                 }
 
                 return self.get_error_line();
