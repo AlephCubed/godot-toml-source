@@ -203,23 +203,32 @@ fn serialize_datetime(dict: &Dictionary) -> Option<Datetime> {
         return None;
     }
 
-    // Todo date and time are still serialized even if none of their keys are present.
-    let date = Date {
-        year: get_int_or_default!(dict, "year"),
-        month: get_int_or_default!(dict, "month"),
-        day: get_int_or_default!(dict, "day"),
-    };
-
-    let time = Time {
-        hour: get_int_or_default!(dict, "hour"),
-        minute: get_int_or_default!(dict, "minute"),
-        second: get_int_or_default!(dict, "second"),
-        nanosecond: get_int_or_default!(dict, "nanosecond"),
-    };
-
+    let mut date = None;
+    let mut time = None;
     let mut offset = None;
 
-    if dict.contains_key("offset") {
+    if dict.contains_key("year") || dict.contains_key("month") || dict.contains_key("day") {
+        date = Some(Date {
+            year: get_int_or_default!(dict, "year"),
+            month: get_int_or_default!(dict, "month"),
+            day: get_int_or_default!(dict, "day"),
+        });
+    }
+
+    if dict.contains_key("hour")
+        || dict.contains_key("minute")
+        || dict.contains_key("second")
+        || dict.contains_key("nanosecond")
+    {
+        time = Some(Time {
+            hour: get_int_or_default!(dict, "hour"),
+            minute: get_int_or_default!(dict, "minute"),
+            second: get_int_or_default!(dict, "second"),
+            nanosecond: get_int_or_default!(dict, "nanosecond"),
+        });
+    }
+
+    if dict.contains_key("offset_minute") {
         if let Some(minutes) = dict
             .get("offset_minute")
             .and_then(|v| Variant::try_to::<i16>(&v).ok())
@@ -231,9 +240,5 @@ fn serialize_datetime(dict: &Dictionary) -> Option<Datetime> {
         }
     }
 
-    Some(Datetime {
-        date: Some(date),
-        time: Some(time),
-        offset,
-    })
+    Some(Datetime { date, time, offset })
 }
