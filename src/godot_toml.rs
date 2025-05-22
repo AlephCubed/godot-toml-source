@@ -75,7 +75,6 @@ impl TOML {
     #[func]
     pub fn stringify(variant: Variant) -> GString {
         let intermediate = serialize_variant(variant);
-        godot_print!("Intermediate {intermediate}");
         toml::to_string_pretty(&intermediate).unwrap().into()
     }
 }
@@ -148,14 +147,8 @@ fn serialize_variant(variant: Variant) -> Value {
     }
 }
 
-fn serialize_array(vec: Vec<Variant>) -> Value {
-    let mut array = toml::value::Array::new();
-
-    for variant in vec {
-        array.push(serialize_variant(variant));
-    }
-
-    Value::Array(array)
+fn serialize_array(vec: VariantArray) -> Value {
+    Value::Array(vec.iter_shared().map(serialize_variant).collect())
 }
 
 fn serialize_dictionary(dict: Dictionary) -> Value {
